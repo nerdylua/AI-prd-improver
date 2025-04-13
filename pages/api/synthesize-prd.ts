@@ -29,13 +29,17 @@ ${prd}
 Debate Transcript:
 ${debateTranscript}
 
-Please generate a final improved PRD that:
-- Incorporates the best points made during the debate
-- Resolves contradictions or conflicts
-- Presents the plan in a structured and clear format
-- Uses bullet points or sections if needed
+Please generate a final improved PRD in a clean, professional format. Present it as plain text with proper spacing and structure:
 
-Final Improved PRD:
+Final Improved PRD: [Project Name]
+
+Overview
+[content]
+
+Key Features
+[content]
+
+The output should be clean and readable without any markdown symbols or formatting characters. Use proper spacing and line breaks to create a clear document structure.
 `;
 
   const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-thinking-exp" });

@@ -5,6 +5,7 @@ import { agentProfiles, AgentName } from "@/lib/agents";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { PRDDisplay } from "@/components/PRDDisplay";
 
 interface Props {
   prd: string;
@@ -71,6 +72,25 @@ export function DebatePanel({ prd, agents }: Props) {
     }
   };
 
+  const handleSavePRD = async (content: string) => {
+    try {
+      const res = await fetch("/api/save-prd", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prdContent: content }),
+      });
+      if (!res.ok) throw new Error("Failed to save PRD");
+      toast.success("PRD saved successfully!");
+    } catch (error) {
+      toast.error("Failed to save PRD");
+    }
+  };
+
+  const handleAcceptPRD = async (content: string) => {
+    await handleSavePRD(content);
+    toast.success("PRD accepted and saved!");
+  };
+
   return (
     <div className="space-y-4 mt-8">
       <h2 className="text-lg font-semibold">Live Debate</h2>
@@ -113,10 +133,14 @@ export function DebatePanel({ prd, agents }: Props) {
       )}
 
       {finalPRD && (
-        <Card className="p-4 mt-4 bg-muted">
+        <div className="mt-4">
           <h3 className="text-lg font-semibold mb-2">Final Improved PRD</h3>
-          <pre className="whitespace-pre-wrap text-sm">{finalPRD}</pre>
-        </Card>
+          <PRDDisplay 
+            prdContent={finalPRD}
+            onSave={handleSavePRD}
+            onAccept={handleAcceptPRD}
+          />
+        </div>
       )}
     </div>
   );
