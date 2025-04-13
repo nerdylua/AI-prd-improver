@@ -1,1 +1,2 @@
-# AI-prd-improver
+# DraftWise
+## An AI-powered PRD Improver
