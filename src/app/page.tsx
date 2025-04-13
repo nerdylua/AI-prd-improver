@@ -12,7 +12,7 @@ export default function HomePage() {
 
   return (
     <main className="max-w-3xl mx-auto py-10 px-4 space-y-6">
-      <h1 className="text-3xl font-bold">AI PRD Improver</h1>
+      <h1 className="text-3xl font-bold">DraftWise: An AI-powered PRD Improver</h1>
       <PRDInput
         onAgentsSelected={(newAgents) => {
           setAgents(newAgents as AgentName[]);
