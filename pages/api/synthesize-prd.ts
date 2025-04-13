@@ -38,7 +38,7 @@ Please generate a final improved PRD that:
 Final Improved PRD:
 `;
 
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro-latest" });
+  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-thinking-exp" });
   const result = await model.generateContent(prompt);
   const improvedPrd = result.response.text().trim();
 

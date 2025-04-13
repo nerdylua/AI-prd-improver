@@ -4,13 +4,22 @@ import { agentProfiles, AgentName } from "@/lib/agents";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
+// Rate limiting configuration
+const REQUEST_DELAY_MS = 7000; // ~8.5 requests/min (under 10/min limit)
+const MAX_ROUNDS = 2; // Reduced from default 3
+const MAX_AGENTS = 3; // Maximum agents to process
+
 type AgentTurn = {
   name: AgentName;
   message: string;
 };
 
+function delay(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const { prd, agents, rounds = 3 } = req.body as {
+  const { prd, agents, rounds = MAX_ROUNDS } = req.body as {
     prd: string;
     agents: AgentName[];
     rounds: number;
@@ -20,21 +29,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: "Missing PRD or agents" });
   }
 
+  // Limit number of agents processed
+  const processedAgents = agents.slice(0, MAX_AGENTS);
   const debateHistory: AgentTurn[] = [];
 
   const systemPrompt = `You are simulating a multi-agent debate. Each agent has a defined personality and expertise. They will respond to the PRD and to each other in turns. Be direct, professional, and assertive. Limit each message to 3 sentences.`;
 
   const model = genAI.getGenerativeModel({ 
-    model: "gemini-1.5-pro-latest"  
+    model: "gemini-2.0-flash-thinking-exp"  
   });
 
-  for (let round = 0; round < rounds; round++) {
-    for (const agent of agents) {
-      const previousTurns = debateHistory.map(
-        (turn) => `${turn.name}: ${turn.message}`
-      ).join("\n");
+  try {
+    for (let round = 0; round < Math.min(rounds, MAX_ROUNDS); round++) {
+      for (const agent of processedAgents) {
+        const previousTurns = debateHistory.map(
+          (turn) => `${turn.name}: ${turn.message}`
+        ).join("\n");
 
-      const prompt = `
+        const prompt = `
 ${systemPrompt}
 
 Product Requirement Document:
@@ -49,15 +61,26 @@ ${previousTurns || "None"}
 ${agent}, what is your message in this round?
 `;
 
-      const result = await model.generateContent({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-      });
+        const result = await model.generateContent({
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+        });
 
-      const reply = result.response.text().trim();
+        const reply = result.response.text().trim();
+        debateHistory.push({ name: agent, message: reply });
 
-      debateHistory.push({ name: agent, message: reply });
+        // Add delay between requests to stay under rate limit
+        if (round < rounds - 1 || agent !== processedAgents[processedAgents.length - 1]) {
+          await delay(REQUEST_DELAY_MS);
+        }
+      }
     }
-  }
 
-  res.status(200).json({ debate: debateHistory });
+    res.status(200).json({ debate: debateHistory });
+  } catch (error) {
+    console.error("Debate error:", error);
+    res.status(500).json({ 
+      error: "Debate failed",
+      details: error instanceof Error ? error.message : String(error)
+    });
+  }
 }

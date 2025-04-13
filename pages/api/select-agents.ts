@@ -24,7 +24,7 @@ Respond ONLY with valid JSON. Example:
 
   try {
     const model = genAI.getGenerativeModel({ 
-      model: "gemini-1.5-pro-latest",  
+      model: "gemini-2.0-flash-thinking-exp",  
       generationConfig: {
         temperature: 0.4
       }
