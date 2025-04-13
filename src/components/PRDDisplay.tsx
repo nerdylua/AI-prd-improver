@@ -10,6 +10,8 @@ interface PRDDisplayProps {
 export function PRDDisplay({ prdContent, onAccept, onSave }: PRDDisplayProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState(prdContent);
+  const [deploymentPlan, setDeploymentPlan] = useState<string>('');
+  const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
 
   const handleSave = () => {
     setIsEditing(false);
@@ -73,6 +75,31 @@ export function PRDDisplay({ prdContent, onAccept, onSave }: PRDDisplayProps) {
     } catch (error) {
       console.error('Download failed:', error);
       alert('Failed to generate PDF. Please try again.');
+    }
+  };
+
+  const generateDeploymentPlan = async () => {
+    try {
+      setIsGeneratingPlan(true);
+      const response = await fetch('/api/generate-deployment-plan', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ prdContent: editedContent }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate deployment plan');
+      }
+
+      const data = await response.json();
+      setDeploymentPlan(data.deploymentPlan);
+    } catch (error) {
+      console.error('Failed to generate deployment plan:', error);
+      alert('Failed to generate deployment plan. Please try again.');
+    } finally {
+      setIsGeneratingPlan(false);
     }
   };
 
@@ -140,8 +167,41 @@ export function PRDDisplay({ prdContent, onAccept, onSave }: PRDDisplayProps) {
               >
                 Download as PDF
               </button>
+              <button
+                onClick={generateDeploymentPlan}
+                disabled={isGeneratingPlan}
+                className="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 disabled:opacity-50"
+              >
+                {isGeneratingPlan ? 'Generating Plan...' : 'Generate Deployment Plan'}
+              </button>
             </div>
           </div>
+
+          {/* Display Deployment Plan */}
+          {deploymentPlan && (
+            <div className="mt-8 border-t pt-4">
+              <h3 className="text-xl font-bold mb-4">Suggested Deployment Plan</h3>
+              <pre className="whitespace-pre-wrap font-sans text-base bg-gray-50 p-4 rounded-lg">
+                {deploymentPlan}
+              </pre>
+              <button
+                onClick={() => {
+                  const blob = new Blob([deploymentPlan], { type: 'text/plain' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = 'deployment-plan.txt';
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  URL.revokeObjectURL(url);
+                }}
+                className="mt-4 px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600"
+              >
+                Download Deployment Plan
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
