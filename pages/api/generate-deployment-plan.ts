@@ -16,24 +16,57 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const prompt = `
-As a technical project manager, analyze this PRD and create a detailed deployment suggestion plan. Include:
+Create a concise deployment plan for this PRD. Write in plain text, no markdown or special formatting.
 
-1. Timeline and Phases
-2. Resource Requirements
-3. Technical Dependencies
-4. Risk Mitigation Steps
-5. Testing Strategy
-6. Rollout Strategy
-
-PRD Content:
+PRD:
 ${prdContent}
 
-Provide a structured, practical deployment plan that can be implemented by the development team.
-`;
+Structure your response with these sections:
+
+Timeline and Phases
+- List key phases with rough timeframes
+- Include major milestones
+
+Resources Needed
+- Team composition
+- Infrastructure requirements
+
+Technical Setup
+- Dependencies and prerequisites
+- Integration points
+
+Risk Management
+- Key risks and mitigation
+- Contingency measures
+
+Testing & Rollout
+- Testing approach
+- Deployment strategy
+
+Keep the response focused and practical. Use simple text formatting with clear headers and bullet points.`;
 
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-thinking-exp" });
-    const result = await model.generateContent(prompt);
-    const deploymentPlan = result.response.text().trim();
+    
+    const result = await model.generateContent({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig: {
+        maxOutputTokens: 1000,
+        temperature: 0.3,
+        topP: 0.7,
+        topK: 20
+      }
+    });
+
+    const deploymentPlan = result.response.text()
+      .trim()
+      // Remove any markdown code blocks or backticks
+      .replace(/```[\s\S]*?```/g, '')
+      .replace(/`/g, '')
+      // Remove any markdown headers
+      .replace(/#{1,6}\s/g, '')
+      // Clean up any excessive newlines
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
 
     res.status(200).json({ deploymentPlan });
   } catch (error) {

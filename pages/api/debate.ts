@@ -4,22 +4,35 @@ import { agentProfiles, AgentName } from "@/lib/agents";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
-// Rate limiting configuration
-const REQUEST_DELAY_MS = 2500; 
-const MAX_ROUNDS = 2; 
-const MAX_AGENTS = 6; // Maximum number of agents allowed
+const MAX_AGENTS = 5; 
 
 type AgentTurn = {
   name: AgentName;
   message: string;
+  round: number;  // Add round number to track turns
 };
 
-function delay(ms: number) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+function validateDebateOrder(debate: AgentTurn[], expectedOrder: AgentName[], totalRounds: number): boolean {
+  if (debate.length !== expectedOrder.length * totalRounds) return false;
+  
+  // Check each round separately
+  for (let round = 0; round < totalRounds; round++) {
+    const roundStart = round * expectedOrder.length;
+    const roundEnd = roundStart + expectedOrder.length;
+    const roundTurns = debate.slice(roundStart, roundEnd);
+    
+    // Verify each agent speaks once in the correct order within this round
+    for (let i = 0; i < expectedOrder.length; i++) {
+      if (roundTurns[i].name !== expectedOrder[i] || roundTurns[i].round !== round + 1) {
+        return false;
+      }
+    }
+  }
+  return true;
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const { prd, agents, rounds = MAX_ROUNDS } = req.body as {
+  const { prd, agents, rounds = 1 } = req.body as {
     prd: string;
     agents: AgentName[];
     rounds: number;
@@ -29,49 +42,79 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: "Missing PRD or agents" });
   }
 
-  // Take only the first 6 agents
   const selectedAgents = agents.slice(0, MAX_AGENTS);
-  const debateHistory: AgentTurn[] = [];
 
-  const systemPrompt = `You are simulating a multi-agent debate. Each agent has a defined personality and expertise. They will respond to the PRD and to each other in turns. Be direct, professional, and assertive. In the first round, provide your initial analysis of the PRD. In the second round, respond to other agents' points and refine your position. Reference specific points made by other agents when relevant. Limit each message to 3-4 sentences.`;
+  const systemPrompt = `You are simulating a structured debate between domain experts. Each expert will speak exactly once, in a specific order. The debate should flow naturally, with each expert building on or challenging previous points while maintaining their professional focus.`;
 
   const model = genAI.getGenerativeModel({ 
     model: "gemini-2.0-flash-thinking-exp"  
   });
 
   try {
-    for (let round = 0; round < Math.min(rounds, MAX_ROUNDS); round++) {
-      for (const agent of selectedAgents) {
-        const previousTurns = debateHistory.map(
-          (turn) => `${turn.name}: ${turn.message}`
-        ).join("\n");
+    // Construct a single prompt that includes all agents and their personas
+    const agentsPrompt = selectedAgents.map(agent => 
+      `${agent}:\nRole: ${agentProfiles[agent].persona}`
+    ).join('\n\n');
 
-        const prompt = `
+    const prompt = `
 ${systemPrompt}
 
 Product Requirement Document:
 ${prd}
 
-Agent: ${agent}
-Persona: ${agentProfiles[agent].persona}
+Expert Panel:
+${agentsPrompt}
 
-Previous Debate:
-${previousTurns || "None"}
+This will be a ${rounds}-round debate.
 
-${agent}, what is your message in this round?
-`;
+IMPORTANT: In each round, experts MUST speak in exactly this order:
+${selectedAgents.map((agent, i) => `${i + 1}. ${agent}`).join('\n')}
 
-        const result = await model.generateContent({
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
-        });
+Debate Rules:
+1. Each expert speaks exactly once per round in the specified order
+2. Complete one full round before starting the next
+3. Each expert should:
+   - Reference points from current round (if not first speaker)
+   - Build on previous rounds (if not first round)
+   - Keep responses focused (50-60 words)
 
-        const reply = result.response.text().trim();
-        debateHistory.push({ name: agent, message: reply });
+Format your response as a JSON array where each element has:
+- name: the expert's name
+- message: their contribution
+- round: the round number (1 to ${rounds})
 
-        // Add delay between requests to stay under rate limit
-        if (round < rounds - 1 || agent !== selectedAgents[selectedAgents.length - 1]) {
-          await delay(REQUEST_DELAY_MS);
+Example format for a 2-round debate:
+[
+  {"name": "${selectedAgents[0]}", "message": "Initial analysis...", "round": 1},
+  {"name": "${selectedAgents[1] || 'Expert 2'}", "message": "Regarding the first point...", "round": 1},
+  {"name": "${selectedAgents[0]}", "message": "Building on our discussion...", "round": 2},
+  {"name": "${selectedAgents[1] || 'Expert 2'}", "message": "To conclude...", "round": 2}
+]
+
+Ensure each round is completed before starting the next round.`;
+
+    const result = await model.generateContent({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+    });
+
+    const reply = result.response.text().trim();
+    let debateHistory: AgentTurn[] = [];
+
+    try {
+      debateHistory = JSON.parse(reply);
+      
+      if (!validateDebateOrder(debateHistory, selectedAgents, rounds)) {
+        throw new Error('Debate response did not follow the required round structure and speaking order');
+      }
+    } catch (e) {
+      const jsonMatch = reply.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        debateHistory = JSON.parse(jsonMatch[0]);
+        if (!validateDebateOrder(debateHistory, selectedAgents, rounds)) {
+          throw new Error('Debate response did not follow the required round structure and speaking order');
         }
+      } else {
+        throw new Error('Failed to parse debate response');
       }
     }
 

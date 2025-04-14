@@ -21,30 +21,51 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   ).join("\n");
 
   const prompt = `
-You are the Opus Orchestrator, an expert product manager tasked with synthesizing the final improved version of a PRD after reviewing a heated, professional debate among multiple experts.
+As a product manager, synthesize a comprehensive improved PRD incorporating expert feedback.
 
 Original PRD:
 ${prd}
 
-Debate Transcript:
+Expert Feedback:
 ${debateTranscript}
 
-Please generate a final improved PRD in a clean, professional format. Present it as plain text with proper spacing and structure:
+Write in plain text, no markdown or special formatting, generate an improved PRD with this structure:
 
-Final Improved PRD: [Project Name]
+[Project Name]
 
-Overview
-[content]
+1. Overview
+- Product vision and goals
+- Target audience and user personas
+- Market positioning and value proposition
+- Success metrics and KPIs
 
-Key Features
-[content]
+2. Features and Requirements
+- Core functionality and capabilities
+- Technical specifications and architecture
+- User experience and interface requirements
+- Performance and scalability considerations
+- Security and compliance needs
 
-The output should be clean and readable without any markdown symbols or formatting characters. Use proper spacing and line breaks to create a clear document structure.
-`;
+3. Implementation
+- Development priorities
+- Technical constraints
+- Risk mitigation
+- Integration requirements
+
+Ensure the PRD is detailed yet concise, incorporating key points from the expert debate.`;
 
   const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-thinking-exp" });
-  const result = await model.generateContent(prompt);
-  const improvedPrd = result.response.text().trim();
+  
+  const result = await model.generateContent({
+    contents: [{ role: "user", parts: [{ text: prompt }] }],
+    generationConfig: {
+      maxOutputTokens: 1500,
+      temperature: 0.3,  // Lower temperature for more focused output
+      topP: 0.7,        // More focused token selection
+      topK: 20          // More concentrated sampling
+    }
+  });
 
+  const improvedPrd = result.response.text().trim();
   res.status(200).json({ improvedPrd });
 }
