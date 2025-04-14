@@ -1,4 +1,3 @@
-
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
@@ -13,13 +12,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const prompt = `
 Given the following Product Requirement Document (PRD), return a STRICT JSON array of roles that should debate it. 
-ONLY use these roles: ["UX Lead", "Backend Engineer", "Data Scientist", "Finance Analyst", "Legal Advisor", "Marketing Strategist", "Product Manager"].
+ONLY use these roles: ["UX Lead", "Backend Engineer", "Data Scientist", "DevOps Engineer", "Security Specialist", "Finance Analyst", "Legal Advisor", "Marketing Strategist"].
 
 PRD:
 ${prd}
 
 Respond ONLY with valid JSON. Example:
-["UX Lead", "Product Manager"]
+["UX Lead", "Backend Engineer"]
 `;
 
   try {

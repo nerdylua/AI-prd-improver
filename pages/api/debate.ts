@@ -5,9 +5,8 @@ import { agentProfiles, AgentName } from "@/lib/agents";
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 // Rate limiting configuration
-const REQUEST_DELAY_MS = 7000; // ~8.5 requests/min (under 10/min limit)
-const MAX_ROUNDS = 2; // Reduced from default 3
-const MAX_AGENTS = 3; // Maximum agents to process
+const REQUEST_DELAY_MS = 2500; 
+const MAX_ROUNDS = 2; 
 
 type AgentTurn = {
   name: AgentName;
@@ -29,11 +28,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: "Missing PRD or agents" });
   }
 
-  // Limit number of agents processed
-  const processedAgents = agents.slice(0, MAX_AGENTS);
   const debateHistory: AgentTurn[] = [];
 
-  const systemPrompt = `You are simulating a multi-agent debate. Each agent has a defined personality and expertise. They will respond to the PRD and to each other in turns. Be direct, professional, and assertive. Limit each message to 3 sentences.`;
+  const systemPrompt = `You are simulating a multi-agent debate. Each agent has a defined personality and expertise. They will respond to the PRD and to each other in turns. Be direct, professional, and assertive. In the first round, provide your initial analysis of the PRD. In the second round, respond to other agents' points and refine your position. Reference specific points made by other agents when relevant. Limit each message to 3-4 sentences.`;
 
   const model = genAI.getGenerativeModel({ 
     model: "gemini-2.0-flash-thinking-exp"  
@@ -41,7 +38,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     for (let round = 0; round < Math.min(rounds, MAX_ROUNDS); round++) {
-      for (const agent of processedAgents) {
+      for (const agent of agents) {
         const previousTurns = debateHistory.map(
           (turn) => `${turn.name}: ${turn.message}`
         ).join("\n");
@@ -69,7 +66,7 @@ ${agent}, what is your message in this round?
         debateHistory.push({ name: agent, message: reply });
 
         // Add delay between requests to stay under rate limit
-        if (round < rounds - 1 || agent !== processedAgents[processedAgents.length - 1]) {
+        if (round < rounds - 1 || agent !== agents[agents.length - 1]) {
           await delay(REQUEST_DELAY_MS);
         }
       }
