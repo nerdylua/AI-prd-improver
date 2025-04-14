@@ -23,6 +23,7 @@ These sub-agents are selected based on the content of the draft PRD and work col
 ## Project Structure
 
 ```bash
+DraftWise
 ├── pages/api/
 │   ├── debate.ts                  # Streams agent responses (debate flow)
 │   ├── download-pdf.ts            # Generate downloadable PRD PDF
@@ -62,11 +63,17 @@ These sub-agents are selected based on the content of the draft PRD and work col
 git clone https://github.com/nerdylua/DraftWise.git
 cd DraftWise
 ```
-### 1. Install Dependencies
+### 2. Install Dependencies
 ```bash
 npm install
 ```
-### 3. Run the Development Server
+### 3. Environment Variable
+To run this project, you will need to add the following environment variable to your `.env` file:
+```env
+GEMINI_API_KEY=your_api_key_here
+```
+Replace `your_api_key_here` with your actual Gemini API key.
+### 4. Run the Development Server
 ```bash
 npm run dev
 ```
