@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { agentProfiles, AgentName } from "@/lib/agents";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { PRDDisplay } from "@/components/PRDDisplay";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Props {
   prd: string;
@@ -92,56 +94,80 @@ export function DebatePanel({ prd, agents }: Props) {
   };
 
   return (
-    <div className="space-y-4 mt-8">
-      <h2 className="text-lg font-semibold">Live Debate</h2>
+    <Card className="border shadow-md">
+      <CardHeader>
+        <CardTitle className="text-2xl font-semibold">Expert Discussion</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <ScrollArea className="h-[500px] pr-4">
+          <div className="space-y-4">
+            {debate.map((turn, index) => {
+              const profile = agentProfiles[turn.name];
+              return (
+                <Card
+                  key={index}
+                  className="transition-all hover:shadow-md"
+                  style={{ 
+                    borderLeft: `4px solid ${profile.color}`,
+                    background: `linear-gradient(to right, ${profile.color}05, transparent)`
+                  }}
+                >
+                  <CardContent className="p-4 flex items-start gap-4">
+                    <div className="shrink-0">
+                      <img
+                        src={profile.avatar}
+                        alt={turn.name}
+                        className="w-10 h-10 rounded-full ring-2 ring-background"
+                      />
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <h4 className="font-semibold" style={{ color: profile.color }}>
+                        {turn.name}
+                      </h4>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        {turn.message}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
 
-      <div className="space-y-2">
-        {debate.map((turn, index) => {
-          const profile = agentProfiles[turn.name];
-          return (
-            <Card
-              key={index}
-              className="p-4 flex items-start gap-4"
-              style={{ borderLeft: `6px solid ${profile.color}` }}
-            >
-              <img
-                src={profile.avatar}
-                alt={turn.name}
-                className="w-10 h-10 rounded-full"
-              />
-              <div>
-                <div className="font-semibold" style={{ color: profile.color }}>
-                  {turn.name}
-                </div>
-                <p className="mt-1 text-sm">{turn.message}</p>
+            {loading && (
+              <div className="space-y-4">
+                <Skeleton className="h-[80px] w-full" />
+                <Skeleton className="h-[80px] w-full" />
               </div>
-            </Card>
-          );
-        })}
+            )}
+          </div>
+        </ScrollArea>
 
-        {loading && (
-          <p className="text-muted-foreground italic">
-            Agents are still debating...
-          </p>
+        {!loading && !finalPRD && (
+          <Button 
+            onClick={synthesizeFinalPRD} 
+            className="w-full"
+            variant="default"
+            size="lg"
+          >
+            {generatingFinal ? "Generating Final PRD..." : "Synthesize Final PRD"}
+          </Button>
         )}
-      </div>
 
-      {!loading && !finalPRD && (
-        <Button onClick={synthesizeFinalPRD}>
-          {generatingFinal ? "Generating Final PRD..." : "Synthesize Final PRD"}
-        </Button>
-      )}
-
-      {finalPRD && (
-        <div className="mt-4">
-          <h3 className="text-lg font-semibold mb-2">Final Improved PRD</h3>
-          <PRDDisplay 
-            prdContent={finalPRD}
-            onSave={handleSavePRD}
-            onAccept={handleAcceptPRD}
-          />
-        </div>
-      )}
-    </div>
+        {finalPRD && (
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>Improved PRD</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <PRDDisplay 
+                prdContent={finalPRD}
+                onSave={handleSavePRD}
+                onAccept={handleAcceptPRD}
+              />
+            </CardContent>
+          </Card>
+        )}
+      </CardContent>
+    </Card>
   );
 }

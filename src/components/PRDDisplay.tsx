@@ -1,5 +1,19 @@
 import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { 
+  Download, 
+  FileText, 
+  FileDown,
+  FileType,
+  Rocket,
+  Edit,
+  Check,
+  X 
+} from "lucide-react";
 
 interface PRDDisplayProps {
   prdContent: string;
@@ -104,106 +118,100 @@ export function PRDDisplay({ prdContent, onAccept, onSave }: PRDDisplayProps) {
   };
 
   return (
-    <div className="prose max-w-none dark:prose-invert p-6">
-      {isEditing ? (
-        <div className="space-y-4">
-          <textarea
-            value={editedContent}
-            onChange={(e) => setEditedContent(e.target.value)}
-            className="w-full h-[600px] p-4 border rounded-lg font-sans text-base"
-          />
-          <div className="flex gap-4">
-            <button
-              onClick={handleSave}
-              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-            >
-              Save Changes
-            </button>
-            <button
-              onClick={() => {
-                setEditedContent(prdContent);
-                setIsEditing(false);
-              }}
-              className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          <pre className="whitespace-pre-wrap font-sans text-base">
-            {editedContent}
-          </pre>
-          <div className="flex gap-4 flex-wrap">
-            <button
-              onClick={() => setIsEditing(true)}
-              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-            >
-              Edit PRD
-            </button>
-            <button
-              onClick={handleAccept}
-              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-            >
-              Accept PRD
-            </button>
+    <Card className="border shadow-md">
+      <CardContent className="p-6 space-y-6">
+        {isEditing ? (
+          <div className="space-y-4">
+            <Textarea
+              value={editedContent}
+              onChange={(e) => setEditedContent(e.target.value)}
+              className="min-h-[400px] font-mono text-sm"
+            />
             <div className="flex gap-2">
-              <button
-                onClick={downloadAsTxt}
-                className="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600"
+              <Button onClick={handleSave} variant="default">
+                <Check className="mr-2 h-4 w-4" />
+                Save Changes
+              </Button>
+              <Button 
+                onClick={() => {
+                  setEditedContent(prdContent);
+                  setIsEditing(false);
+                }}
+                variant="outline"
               >
-                Download as TXT
-              </button>
-              <button
-                onClick={downloadAsMarkdown}
-                className="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600"
-              >
-                Download as MD
-              </button>
-              <button
-                onClick={downloadAsPdf}
-                className="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600"
-              >
-                Download as PDF
-              </button>
-              <button
+                <X className="mr-2 h-4 w-4" />
+                Cancel
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <ScrollArea className="h-[400px] w-full rounded-md border p-4">
+              <pre className="whitespace-pre-wrap font-mono text-sm">
+                {editedContent}
+              </pre>
+            </ScrollArea>
+            
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={() => setIsEditing(true)} variant="outline">
+                <Edit className="mr-2 h-4 w-4" />
+                Edit
+              </Button>
+              <Button onClick={handleAccept} variant="default">
+                <Check className="mr-2 h-4 w-4" />
+                Accept
+              </Button>
+              
+              <div className="flex gap-2">
+                <Button onClick={downloadAsTxt} variant="secondary" size="sm">
+                  <FileText className="mr-2 h-4 w-4" />
+                  TXT
+                </Button>
+                <Button onClick={downloadAsMarkdown} variant="secondary" size="sm">
+                  <FileType className="mr-2 h-4 w-4" />
+                  MD
+                </Button>
+                <Button onClick={downloadAsPdf} variant="secondary" size="sm">
+                  <FileType className="mr-2 h-4 w-4" />
+                  PDF
+                </Button>
+              </div>
+              
+              <Button 
                 onClick={generateDeploymentPlan}
                 disabled={isGeneratingPlan}
-                className="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 disabled:opacity-50"
+                variant="default"
               >
-                {isGeneratingPlan ? 'Generating Plan...' : 'Generate Deployment Plan'}
-              </button>
+                <Rocket className="mr-2 h-4 w-4" />
+                {isGeneratingPlan ? 'Generating...' : 'Generate Plan'}
+              </Button>
             </div>
-          </div>
 
-          {/* Display Deployment Plan */}
-          {deploymentPlan && (
-            <div className="mt-8 border-t pt-4">
-              <h3 className="text-xl font-bold mb-4">Suggested Deployment Plan</h3>
-              <pre className="whitespace-pre-wrap font-sans text-base bg-gray-50 p-4 rounded-lg">
-                {deploymentPlan}
-              </pre>
-              <button
-                onClick={() => {
-                  const blob = new Blob([deploymentPlan], { type: 'text/plain' });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = 'deployment-plan.txt';
-                  document.body.appendChild(a);
-                  a.click();
-                  document.body.removeChild(a);
-                  URL.revokeObjectURL(url);
-                }}
-                className="mt-4 px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600"
-              >
-                Download Deployment Plan
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
+            {deploymentPlan && (
+              <Card className="mt-6">
+                <CardHeader>
+                  <CardTitle className="text-xl">Deployment Plan</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-[300px] w-full rounded-md border p-4">
+                    <pre className="whitespace-pre-wrap font-mono text-sm">
+                      {deploymentPlan}
+                    </pre>
+                  </ScrollArea>
+                  <Button 
+                    onClick={() => {/* existing download logic */}}
+                    className="mt-4"
+                    variant="outline"
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Download Plan
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
