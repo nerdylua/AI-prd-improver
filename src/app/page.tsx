@@ -18,9 +18,9 @@ export default function HomePage() {
   const { theme, setTheme } = useTheme();
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted">
+    <div className="fixed inset-0 overflow-auto bg-gradient-to-b from-background to-muted">
       {/* Theme Toggle Dropdown */}
-      <div className="fixed top-4 right-4">
+      <div className="fixed top-4 right-4 z-50">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="icon">
@@ -46,7 +46,7 @@ export default function HomePage() {
         </DropdownMenu>
       </div>
 
-      <main className="container max-w-4xl mx-auto py-8 px-4 space-y-6">
+      <main className="container max-w-4xl mx-auto py-8 px-4 space-y-6 min-h-full">
         <Card className="border-none shadow-lg">
           <CardHeader className="text-center pb-2">
             <CardTitle className="text-6xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
